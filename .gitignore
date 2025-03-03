@@ -1,0 +1,11 @@
+*.ini
+*.sqlite3
+*.session
+*.vdb
+venv
+.idea
+*.env
+data
+docker
+*.pyc
+__pycache__/

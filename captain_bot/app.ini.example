@@ -1,0 +1,4 @@
+[api]
+api_hash = hash_from_telegram
+api_id = id_from_telegram
+bot_token = your_bot_token
