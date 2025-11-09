@@ -1,6 +1,8 @@
 from datetime import datetime
 
+from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.base import SchedulerAlreadyRunningError
 from .init import bot
 
 from captain_bot_control.models import Reminder
@@ -30,7 +32,17 @@ message_for_user = {
 }
 
 
+
+def ensure_scheduler_running():
+    """Start the scheduler if it has not been started yet."""
+    try:
+        scheduler.start()
+    except SchedulerAlreadyRunningError:
+        pass
+
+
 def create_job(user_id, reminder_id, date):
+    ensure_scheduler_running()
     print(user_id, reminder_id, date)
     if date.trigger == "cron":
         if date.everyday is True:
@@ -50,6 +62,17 @@ def create_job(user_id, reminder_id, date):
             date.year, date.month, date.day_of_month, date.hour, date.minute),
                                 args=[user_id, reminder_id, True, reminder_id])
         return job.id
+
+
+def cancel_job(job_id):
+    if not job_id:
+        return False
+    ensure_scheduler_running()
+    try:
+        scheduler.remove_job(job_id)
+        return True
+    except JobLookupError:
+        return False
 
 
 def send_reminder(chat_id, reminder_id, delete_reminder_after_execute=True, note_id=0):
@@ -90,5 +113,13 @@ def transfer_reminder_to_notes(user_id, reminder_id, delete_reminder_after_execu
     Note.objects.create(user_id=user_id, text=reminder.text,
                         date_for_user=f'{message_for_user[user.language]["completed"]}{reminder.date_for_user}',
                         date=datetime.now())
+    updated_fields = []
+    reminder.completed_at = datetime.now()
+    updated_fields.append('completed_at')
     if delete_reminder_after_execute:
+        reminder.is_completed = True
+        reminder.job_id = None
+        updated_fields.extend(['is_completed', 'job_id'])
+    reminder.save(update_fields=updated_fields)
+    if delete_reminder_after_execute and not reminder.preserve_after_trigger:
         Reminder.objects.filter(user_id=user_id, id=reminder_id).delete()

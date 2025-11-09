@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: Mnemozer API
+  version: 1.0.0
+  description: |
+    HTTP API for integrating with the Mnemozer reminder bot. The API exposes
+    read and write access to reminders as well as a read-only feed of notes
+    captured by the bot.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /api/v1/users/{user_id}/reminders/:
+    get:
+      summary: List reminders for a user
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, completed, all]
+          description: Filter reminders by completion status. Defaults to `active`.
+      responses:
+        '200':
+          description: A collection of reminders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderList'
+    post:
+      summary: Create a reminder
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderCreateRequest'
+      responses:
+        '201':
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/users/{user_id}/reminders/{reminder_id}/:
+    get:
+      summary: Retrieve a single reminder
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ReminderId'
+      responses:
+        '200':
+          description: Reminder details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a reminder
+      description: Partially update reminder text, schedule or status.
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ReminderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderUpdateRequest'
+      responses:
+        '200':
+          description: Updated reminder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a reminder
+      tags: [Reminders]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ReminderId'
+      responses:
+        '204':
+          description: Reminder deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/users/{user_id}/notes/:
+    get:
+      summary: List captured notes for a user
+      tags: [Notes]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+          description: Optional limit for pagination.
+      responses:
+        '200':
+          description: Note feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteList'
+components:
+  parameters:
+    UserId:
+      in: path
+      name: user_id
+      required: true
+      schema:
+        type: string
+      description: Telegram user identifier used by Mnemozer.
+    ReminderId:
+      in: path
+      name: reminder_id
+      required: true
+      schema:
+        type: integer
+      description: Numeric reminder identifier.
+  responses:
+    BadRequest:
+      description: Invalid request payload or query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    ReminderList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reminder'
+    Reminder:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: string
+        text:
+          type: string
+        remind_at:
+          type: string
+          format: date-time
+          nullable: true
+        display_time:
+          type: string
+          nullable: true
+        is_completed:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        body_type:
+          type: string
+          nullable: true
+        type:
+          type: string
+        job_id:
+          type: string
+          nullable: true
+        preserve_after_trigger:
+          type: boolean
+      required:
+        - id
+        - user_id
+        - text
+        - is_completed
+        - type
+        - preserve_after_trigger
+    ReminderCreateRequest:
+      type: object
+      required:
+        - text
+        - remind_at
+      properties:
+        text:
+          type: string
+          description: Reminder message that will be delivered to the user.
+        remind_at:
+          type: string
+          format: date-time
+          description: Target date and time in ISO 8601 (UTC). Seconds are ignored.
+        body_type:
+          type: string
+          description: Optional body type, defaults to `text`.
+        preserve_after_trigger:
+          type: boolean
+          description: Keep the reminder record after it triggers.
+    ReminderUpdateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        remind_at:
+          type: string
+          format: date-time
+        preserve_after_trigger:
+          type: boolean
+        is_completed:
+          type: boolean
+    NoteList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Note'
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: string
+        text:
+          type: string
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        display_time:
+          type: string
+          nullable: true
+        body_type:
+          type: string
+          nullable: true
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

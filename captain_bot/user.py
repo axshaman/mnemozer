@@ -13,7 +13,7 @@ class UserInBot:
     def delete_celery_task(self):
         try:
             user = User.objects.get(user_id=self.user_id)
-            if user.celery_task_id is not 'void':
+            if user.celery_task_id != 'void':
                 app.control.revoke(user.celery_task_id)
                 user.celery_task_id = 'void'
                 user.save()

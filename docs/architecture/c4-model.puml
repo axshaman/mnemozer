@@ -1,0 +1,24 @@
+@startuml MnemozerC4
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+' Context diagram
+autonumber 1
+Person(user, "Telegram User", "Creates reminders and receives notifications")
+System_Ext(telegram, "Telegram Platform", "Routes updates to the bot")
+System_Boundary(mnemozer, "Mnemozer") {
+  System(bot, "Captain Bot", "Handles conversational flows")
+  System(api, "REST API", "Integrations manage reminders")
+  SystemDb(db, "Database", "Stores reminders, notes and user metadata")
+  System_Ext(queue, "RabbitMQ", "Queues Celery tasks")
+  System_Ext(celery, "Celery Worker", "Processes background jobs")
+}
+
+Rel(user, bot, "Chats via Telegram")
+Rel(bot, telegram, "Webhook updates")
+Rel(bot, db, "CRUD via ORM")
+Rel(bot, queue, "Publish jobs")
+Rel(celery, queue, "Consume jobs")
+Rel(api, db, "CRUD via ORM")
+@enduml

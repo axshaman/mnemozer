@@ -10,6 +10,9 @@ class Reminder(models.Model):
     file_path = models.CharField(max_length=100, null=True)
     body_type = models.CharField(max_length=20, null=True)
     type = models.CharField(max_length=20)
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    preserve_after_trigger = models.BooleanField(default=False)
 
 
 class Note(models.Model):
