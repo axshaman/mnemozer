@@ -15,12 +15,12 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
-
 from django.http.response import HttpResponse
+from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
 from captain_bot.bot import bot
+from captain_bot_control import api as control_api
 from telebot.types import Update
 
 
@@ -44,5 +44,9 @@ def home_page(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('telegram/', webhook_receiver, name='telegram_webhook'),
-    path('', home_page, name='home_page')
+    path('', home_page, name='home_page'),
+    path('api/v1/users/<str:user_id>/reminders/', control_api.reminders_collection, name='reminders_collection'),
+    path('api/v1/users/<str:user_id>/reminders/<int:reminder_id>/', control_api.reminder_detail,
+         name='reminder_detail'),
+    path('api/v1/users/<str:user_id>/notes/', control_api.notes_collection, name='notes_collection'),
 ]
